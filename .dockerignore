@@ -1,0 +1,45 @@
+# Build artifacts (Maven/Gradle)
+target/
+.mvn/
+mvnw
+mvnw.cmd
+
+# Version control
+.git/
+.gitignore
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+.eclipse/
+.metadata/
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Documentation (não necessária no container)
+README.md
+docs/
+*.md
+
+# Spring Boot specific
+application-local.properties
+application-dev.properties
+.spring-boot-devtools.properties
+
+# Test reports
+surefire-reports/
