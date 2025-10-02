@@ -1,0 +1,87 @@
+name: CI Biblioteca Pessoal
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_TAG: bibliotecapessoal
+
+jobs:
+  build:
+    name: Build & Test (Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+          cache: "maven"
+
+      - name: Maven verify
+        run: mvn -B verify
+
+  docker:
+    name: Build & Push Docker image (GHCR)
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image tags
+        id: vars
+        run: |
+          echo "SHORT_SHA=${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.REPO_LC }}/${{ env.IMAGE_TAG }}:sha-${{ steps.vars.outputs.SHORT_SHA }}
+            ${{ env.REGISTRY }}/${{ steps.vars.outputs.REPO_LC }}/${{ env.IMAGE_TAG }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    needs: docker
+    environment: development
+    steps:
+      - name: Show image to deploy (DEV)
+        run: |
+          echo "Deploying to DEV..."
+          echo "Image: $REGISTRY/${{ github.repository }}/${{ env.IMAGE_TAG }}:latest" | tr '[:upper:]' '[:lower:]'
+
+  deploy-prod:
+    name: Deploy to Production (manual approval)
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment: production
+    steps:
+      - name: Show image to deploy (PROD)
+        run: |
+          echo "Deploying to PROD (after approval)..."
+          echo "Image: $REGISTRY/${{ github.repository }}/${{ env.IMAGE_TAG }}:latest" | tr '[:upper:]' '[:lower:]'
